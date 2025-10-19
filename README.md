@@ -1,47 +1,76 @@
 # Pingo - Ping Statistics Monitor
 
-A lightweight network monitoring tool that continuously pings a target host and visualizes latency statistics over time.
+A lightweight network monitoring tool designed for Raspberry Pi that continuously pings a target host and visualizes latency statistics over time.
+
+Optimized to run on resource-constrained devices like Raspberry Pi Zero, but also works on other platforms (Linux, macOS).
 
 ## Features
 
-- **Continuous Monitoring**: Runs 30 pings every round and saves summary statistics
-- **SQLite Storage**: Stores min/avg/max/stddev metrics with automatic 30-day retention
-- **Web Dashboard**: Real-time charts accessible at `http://localhost:7777`
+- **Continuous Monitoring**: Configurable ping rounds (default: 30 pings per round)
+- **SQLite Storage**: Stores min/avg/max/stddev metrics with configurable retention (default: 30 days)
+- **Web Dashboard**: Real-time charts accessible at `http://localhost:7777` (configurable port)
 - **Interactive Visualization**:
   - Combined chart showing all metrics
   - Toggle visibility of individual metrics (min, avg, max, stddev)
   - Date range filtering for historical data analysis
   - Auto-refresh every 5 seconds
-- **Configuration**: TOML config file support with CLI overrides
-- **Cross-Platform**: Works on macOS, Linux (including Raspberry Pi)
+- **Flexible Configuration**: TOML config file support with CLI overrides
+- **Cross-Platform**: Optimized for Raspberry Pi, also runs on other Linux distributions and macOS
 - **Single Binary**: No external dependencies, embeds web UI
-
-## Building
-
-### Local Build
-```bash
-go build -o pingo main.go
-```
-
-### Cross-Compile for Raspberry Pi (64-bit)
-```bash
-GOOS=linux GOARCH=arm64 go build -o pingo-arm64 main.go
-```
-
-### Cross-Compile for Raspberry Pi (32-bit)
-```bash
-GOOS=linux GOARCH=arm GOARM=7 go build -o pingo-arm main.go
-```
+- **Lightweight**: Minimal resource usage, perfect for Raspberry Pi Zero
 
 ## Installation
 
-### Quick Start
+### Raspberry Pi / Debian-based Systems (Recommended)
+
+Download and install the `.deb` package for automatic setup:
+
 ```bash
+# Raspberry Pi (ARM64 - Raspberry Pi 3/4/5)
+wget https://github.com/gcstr/pingo/releases/latest/download/pingo_0.1.0_linux_arm64.deb
+sudo dpkg -i pingo_0.1.0_linux_arm64.deb
+
+# Raspberry Pi (ARMv7 - Raspberry Pi Zero/2)
+wget https://github.com/gcstr/pingo/releases/latest/download/pingo_0.1.0_linux_armv7.deb
+sudo dpkg -i pingo_0.1.0_linux_armv7.deb
+
+# x86_64 Linux
+wget https://github.com/gcstr/pingo/releases/latest/download/pingo_0.1.0_linux_amd64.deb
+sudo dpkg -i pingo_0.1.0_linux_amd64.deb
+```
+
+The `.deb` package will:
+- Install the binary to `/usr/bin/pingo`
+- Create the systemd service
+- Enable and start the service automatically
+- Dashboard will be available at `http://localhost:7777`
+
+### RedHat/Fedora Systems
+
+```bash
+# ARM64
+wget https://github.com/gcstr/pingo/releases/latest/download/pingo_0.1.0_linux_arm64.rpm
+sudo rpm -i pingo_0.1.0_linux_arm64.rpm
+
+# x86_64
+wget https://github.com/gcstr/pingo/releases/latest/download/pingo_0.1.0_linux_amd64.rpm
+sudo rpm -i pingo_0.1.0_linux_amd64.rpm
+```
+
+### Manual Installation (macOS / Other Linux)
+
+Download the appropriate archive for your platform:
+
+```bash
+# Extract the archive
+tar xzf pingo_0.1.0_*.tar.gz
+
 # Run with defaults
 ./pingo
 ```
 
 ### With Configuration File
+
 ```bash
 # Create config directory
 mkdir -p ~/.config/pingo
@@ -54,6 +83,27 @@ nano ~/.config/pingo/config.toml
 
 # Run
 ./pingo
+```
+
+## Building from Source
+
+### Prerequisites
+
+- Go 1.21 or later
+
+### Local Build
+```bash
+go build -o pingo
+```
+
+### Cross-Compile for Raspberry Pi (64-bit)
+```bash
+GOOS=linux GOARCH=arm64 go build -o pingo-arm64
+```
+
+### Cross-Compile for Raspberry Pi (32-bit)
+```bash
+GOOS=linux GOARCH=arm GOARM=7 go build -o pingo-arm
 ```
 
 ## Configuration
@@ -120,11 +170,31 @@ Options:
 ./pingo -port 9000 -target 9.9.9.9
 ```
 
-## Running as a Service on Raspberry Pi
+## Managing the Service
 
-See `pingo.service` for systemd service configuration.
+If you installed via `.deb` or `.rpm` package, pingo runs as a systemd service:
 
-## TODO
+```bash
+# Check service status
+sudo systemctl status pingo
 
-- [ ] Create `.deb` package for easy installation on Debian-based systems
-- [ ] Create install script for automated service setup across different distros
+# Stop service
+sudo systemctl stop pingo
+
+# Start service
+sudo systemctl start pingo
+
+# Restart service
+sudo systemctl restart pingo
+
+# View logs
+sudo journalctl -u pingo -f
+
+# Disable auto-start on boot
+sudo systemctl disable pingo
+
+# Enable auto-start on boot
+sudo systemctl enable pingo
+```
+
+For manual installation, see `pingo.service` for systemd service configuration.
