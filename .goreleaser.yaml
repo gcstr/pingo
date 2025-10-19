@@ -1,0 +1,144 @@
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+    - go test ./...
+
+builds:
+  - id: pingo
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+      - arm
+    goarm:
+      - "7"
+    ignore:
+      - goos: darwin
+        goarch: arm
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+
+archives:
+  - id: default
+    format: tar.gz
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- .Version }}_
+      {{- .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - LICENSE*
+      - README*
+      - config.toml.example
+
+nfpms:
+  - id: pingo
+    package_name: pingo
+    vendor: gcstr
+    homepage: https://github.com/gcstr/pingo
+    maintainer: Gustavo Castro <gcstr@users.noreply.github.com>
+    description: |
+      Pingo - Ping Statistics Monitor
+      A lightweight network monitoring tool that continuously pings a target host
+      and visualizes latency statistics over time via a web dashboard.
+    license: MIT
+    formats:
+      - deb
+      - rpm
+    bindir: /usr/bin
+    contents:
+      - src: pingo.service
+        dst: /etc/systemd/system/pingo.service
+        type: config
+      - src: config.toml.example
+        dst: /etc/pingo/config.toml.example
+        type: config
+    scripts:
+      postinstall: |
+        #!/bin/sh
+        # Create data directories
+        mkdir -p /var/lib/pingo
+
+        # Reload systemd
+        systemctl daemon-reload
+
+        # Enable and start service
+        systemctl enable pingo
+        systemctl start pingo
+
+        echo "Pingo has been installed and started."
+        echo "Dashboard: http://localhost:7777"
+        echo "Config: /etc/pingo/config.toml.example"
+        echo "Service: systemctl status pingo"
+      preremove: |
+        #!/bin/sh
+        # Stop and disable service
+        systemctl stop pingo
+        systemctl disable pingo
+      postremove: |
+        #!/bin/sh
+        # Reload systemd
+        systemctl daemon-reload
+
+checksum:
+  name_template: 'checksums.txt'
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'
+      - Merge pull request
+      - Merge branch
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
+      order: 0
+    - title: Bug Fixes
+      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+      order: 1
+    - title: Others
+      order: 999
+
+release:
+  github:
+    owner: gcstr
+    name: pingo
+  draft: false
+  prerelease: auto
+  mode: replace
+  header: |
+    ## Pingo {{ .Tag }}
+
+    Download the appropriate package for your system:
+    - **Debian/Ubuntu/Raspbian**: Download the `.deb` file
+    - **RedHat/Fedora**: Download the `.rpm` file
+    - **macOS/Linux (generic)**: Download the `.tar.gz` archive
+
+    ### Installation
+
+    **Debian-based systems:**
+    ```bash
+    wget https://github.com/gcstr/pingo/releases/download/{{ .Tag }}/pingo_{{ .Version }}_linux_arm64.deb
+    sudo dpkg -i pingo_{{ .Version }}_linux_arm64.deb
+    ```
+
+    The service will start automatically. Access the dashboard at http://localhost:7777
