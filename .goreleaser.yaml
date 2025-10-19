@@ -69,31 +69,9 @@ nfpms:
         dst: /etc/pingo/config.toml.example
         type: config
     scripts:
-      postinstall: |
-        #!/bin/sh
-        # Create data directories
-        mkdir -p /var/lib/pingo
-
-        # Reload systemd
-        systemctl daemon-reload
-
-        # Enable and start service
-        systemctl enable pingo
-        systemctl start pingo
-
-        echo "Pingo has been installed and started."
-        echo "Dashboard: http://localhost:7777"
-        echo "Config: /etc/pingo/config.toml.example"
-        echo "Service: systemctl status pingo"
-      preremove: |
-        #!/bin/sh
-        # Stop and disable service
-        systemctl stop pingo
-        systemctl disable pingo
-      postremove: |
-        #!/bin/sh
-        # Reload systemd
-        systemctl daemon-reload
+      postinstall: scripts/postinstall.sh
+      preremove: scripts/preremove.sh
+      postremove: scripts/postremove.sh
 
 checksum:
   name_template: 'checksums.txt'
