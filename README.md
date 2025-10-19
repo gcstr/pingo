@@ -6,14 +6,9 @@ Optimized to run on resource-constrained devices like Raspberry Pi Zero, but als
 
 ## Features
 
-- **Continuous Monitoring**: Configurable ping rounds (default: 30 pings per round)
-- **SQLite Storage**: Stores min/avg/max/stddev metrics with configurable retention (default: 30 days)
-- **Web Dashboard**: Real-time charts accessible at `http://localhost:7777` (configurable port)
-- **Interactive Visualization**:
-  - Combined chart showing all metrics
-  - Toggle visibility of individual metrics (min, avg, max, stddev)
-  - Date range filtering for historical data analysis
-  - Auto-refresh every 5 seconds
+- **Continuous Monitoring**: Configurable ping rounds
+- **SQLite Storage**: Stores metrics with configurable retention
+- **Web Dashboard**: Real-time charts
 - **Flexible Configuration**: TOML config file support with CLI overrides
 - **Cross-Platform**: Optimized for Raspberry Pi, also runs on other Linux distributions and macOS
 - **Single Binary**: No external dependencies, embeds web UI
@@ -21,7 +16,7 @@ Optimized to run on resource-constrained devices like Raspberry Pi Zero, but als
 
 ## Installation
 
-### Raspberry Pi / Debian-based Systems (Recommended)
+### Raspberry Pi / Debian-based Systems
 
 Download and install the `.deb` package for automatic setup:
 
@@ -175,17 +170,8 @@ Options:
 If you installed via `.deb` or `.rpm` package, pingo runs as a systemd service:
 
 ```bash
-# Check service status
-sudo systemctl status pingo
-
-# Stop service
-sudo systemctl stop pingo
-
-# Start service
-sudo systemctl start pingo
-
-# Restart service
-sudo systemctl restart pingo
+# systemctl
+sudo systemctl [status,stop,start,restart] pingo
 
 # View logs
 sudo journalctl -u pingo -f
