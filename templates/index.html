@@ -1,140 +1,332 @@
 <!DOCTYPE html>
-<html>
+<html lang="en" data-theme="dark">
 <head>
-    <title>Ping Monitor</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pingo - Ping Monitor</title>
+
+    <!-- Pico CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+
+    <!-- Lightweight Charts -->
+    <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+
     <style>
+        :root {
+            --pico-font-size: 100%;
+        }
+
         body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            background-color: #f5f5f5;
+            padding: 0;
         }
-        h1 {
-            text-align: center;
-            color: #333;
-        }
-        .filter-container {
-            max-width: 1400px;
-            margin: 20px auto;
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            display: flex;
-            gap: 15px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-        .filter-container label {
-            font-weight: bold;
-        }
-        .filter-container input {
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 14px;
-        }
-        .filter-container button {
-            padding: 8px 20px;
-            background: #2196F3;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-        .filter-container button:hover {
-            background: #1976D2;
-        }
-        .filter-container button.reset {
-            background: #757575;
-        }
-        .filter-container button.reset:hover {
-            background: #616161;
-        }
-        .controls-container {
-            max-width: 1400px;
-            margin: 20px auto;
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .controls-container h3 {
-            margin-top: 0;
-            margin-bottom: 15px;
-            color: #333;
-        }
-        .checkbox-group {
-            display: flex;
-            gap: 25px;
-            flex-wrap: wrap;
-        }
-        .checkbox-group label {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-        }
-        .checkbox-group input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
-            cursor: pointer;
-        }
+
         .container {
             max-width: 1400px;
-            margin: 0 auto;
+            padding: 1rem;
         }
+
+        /* Navigation */
+        nav {
+            background: var(--pico-background-color);
+            border-bottom: 1px solid var(--pico-muted-border-color);
+        }
+
+        nav ul {
+            align-items: center;
+        }
+
+        nav h1 {
+            font-size: 1.5rem;
+            margin: 0;
+        }
+
+        /* Dropdown */
+        details {
+            position: relative;
+        }
+
+        details summary {
+            cursor: pointer;
+            list-style: none;
+        }
+
+        details summary::-webkit-details-marker {
+            display: none;
+        }
+
+        details[open] summary ~ * {
+            animation: slideDown 0.2s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        details ul {
+            position: absolute;
+            right: 0;
+            top: 100%;
+            margin-top: 0.5rem;
+            background: var(--pico-card-background-color);
+            border: 1px solid var(--pico-muted-border-color);
+            border-radius: var(--pico-border-radius);
+            padding: 1rem;
+            min-width: 200px;
+            box-shadow: var(--pico-card-box-shadow);
+            z-index: 99;
+        }
+
+        details ul li {
+            list-style: none;
+            padding: 0.5rem 0;
+        }
+
+        details ul li label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin: 0;
+            cursor: pointer;
+        }
+
+        /* Filter dropdown content */
+        details .filter-form {
+            position: absolute;
+            right: 0;
+            top: 100%;
+            margin-top: 0.5rem;
+            background: var(--pico-card-background-color);
+            border: 1px solid var(--pico-muted-border-color);
+            border-radius: var(--pico-border-radius);
+            padding: 1.5rem;
+            min-width: 350px;
+            box-shadow: var(--pico-card-box-shadow);
+            z-index: 99;
+        }
+
+        .filter-form .grid {
+            margin-bottom: 1rem;
+        }
+
+        .filter-form .grid > * {
+            margin-bottom: 0;
+        }
+
+        .filter-form .button-group {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .filter-form .button-group button {
+            margin: 0;
+            flex: 1;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        header p {
+            color: var(--pico-muted-color);
+            margin: 0;
+        }
+
         .chart-container {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            position: relative;
+            height: 500px;
+            margin-top: 1rem;
         }
-        canvas {
-            max-height: 500px;
+
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            color: var(--pico-muted-color);
         }
+
+        .pulse {
+            width: 8px;
+            height: 8px;
+            background: var(--pico-primary);
+            border-radius: 50%;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        article header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Metric color indicators */
+        .metric-min { color: #4CAF50; }
+        .metric-avg { color: #2196F3; }
+        .metric-max { color: #FF9800; }
+        .metric-std { color: #9C27B0; }
     </style>
 </head>
 <body>
-    <h1>Ping Statistics Monitor</h1>
-    <div class="filter-container">
-        <label>From:</label>
-        <input type="datetime-local" id="startDate">
-        <label>To:</label>
-        <input type="datetime-local" id="endDate">
-        <button onclick="applyFilter()">Apply Filter</button>
-        <button class="reset" onclick="resetFilter()">Show Recent</button>
-    </div>
-    <div class="controls-container">
-        <h3>Visible Metrics</h3>
-        <div class="checkbox-group">
-            <label>
-                <input type="checkbox" id="showMin" checked onchange="toggleDataset('min')">
-                <span style="color: #4CAF50; font-weight: bold;">Minimum</span>
-            </label>
-            <label>
-                <input type="checkbox" id="showAvg" checked onchange="toggleDataset('avg')">
-                <span style="color: #2196F3; font-weight: bold;">Average</span>
-            </label>
-            <label>
-                <input type="checkbox" id="showMax" checked onchange="toggleDataset('max')">
-                <span style="color: #FF9800; font-weight: bold;">Maximum</span>
-            </label>
-            <label>
-                <input type="checkbox" id="showStddev" checked onchange="toggleDataset('stddev')">
-                <span style="color: #9C27B0; font-weight: bold;">Std Deviation</span>
-            </label>
-        </div>
-    </div>
-    <div class="container">
-        <div class="chart-container">
-            <canvas id="combinedChart"></canvas>
-        </div>
-    </div>
+    <!-- Navigation -->
+    <nav class="container-fluid">
+        <ul>
+            <li><h1>🌐 Pingo Monitor</h1></li>
+        </ul>
+        <ul>
+            <li>
+                <div class="status-indicator">
+                    <div class="pulse"></div>
+                    <span>Auto-refresh: 5s</span>
+                </div>
+            </li>
+            <li>
+                <details role="list">
+                    <summary aria-haspopup="listbox" role="button">📅 Filter</summary>
+                    <div class="filter-form">
+                        <div class="grid">
+                            <label>
+                                From:
+                                <input type="datetime-local" id="startDate" name="startDate">
+                            </label>
+                            <label>
+                                To:
+                                <input type="datetime-local" id="endDate" name="endDate">
+                            </label>
+                        </div>
+                        <div class="button-group">
+                            <button onclick="applyFilter()">Apply</button>
+                            <button onclick="resetFilter()" class="secondary">Reset</button>
+                        </div>
+                    </div>
+                </details>
+            </li>
+            <li>
+                <details role="list">
+                    <summary aria-haspopup="listbox" role="button">🎛️ Metrics</summary>
+                    <ul role="listbox">
+                        <li>
+                            <label>
+                                <input type="checkbox" id="showMin" checked onchange="toggleSeries('min')">
+                                <span class="metric-min">● Minimum</span>
+                            </label>
+                        </li>
+                        <li>
+                            <label>
+                                <input type="checkbox" id="showAvg" checked onchange="toggleSeries('avg')">
+                                <span class="metric-avg">● Average</span>
+                            </label>
+                        </li>
+                        <li>
+                            <label>
+                                <input type="checkbox" id="showMax" checked onchange="toggleSeries('max')">
+                                <span class="metric-max">● Maximum</span>
+                            </label>
+                        </li>
+                        <li>
+                            <label>
+                                <input type="checkbox" id="showStddev" checked onchange="toggleSeries('stddev')">
+                                <span class="metric-std">● Std Deviation</span>
+                            </label>
+                        </li>
+                    </ul>
+                </details>
+            </li>
+        </ul>
+    </nav>
+
+    <main class="container">
+        <!-- Header -->
+        <header>
+            <p>Real-time network latency statistics</p>
+        </header>
+
+        <!-- Chart -->
+        <article>
+            <header>
+                <strong>📊 Ping Statistics Over Time</strong>
+            </header>
+            <div id="chart" class="chart-container"></div>
+        </article>
+    </main>
+
     <script>
         let chart = null;
+        let series = {};
         let autoRefreshInterval = null;
+
+        // Initialize chart
+        function initChart() {
+            const chartContainer = document.getElementById('chart');
+
+            chart = LightweightCharts.createChart(chartContainer, {
+                width: chartContainer.clientWidth,
+                height: 500,
+                layout: {
+                    background: { color: 'transparent' },
+                    textColor: '#d1d4dc',
+                },
+                grid: {
+                    vertLines: { color: 'rgba(128, 128, 128, 0.1)' },
+                    horzLines: { color: 'rgba(128, 128, 128, 0.1)' },
+                },
+                crosshair: {
+                    mode: LightweightCharts.CrosshairMode.Normal,
+                },
+                rightPriceScale: {
+                    borderColor: 'rgba(128, 128, 128, 0.2)',
+                },
+                timeScale: {
+                    borderColor: 'rgba(128, 128, 128, 0.2)',
+                    timeVisible: true,
+                    secondsVisible: false,
+                },
+            });
+
+            // Create series for each metric
+            series.min = chart.addLineSeries({
+                color: '#4CAF50',
+                lineWidth: 2,
+                title: 'Minimum',
+            });
+
+            series.avg = chart.addLineSeries({
+                color: '#2196F3',
+                lineWidth: 2,
+                title: 'Average',
+            });
+
+            series.max = chart.addLineSeries({
+                color: '#FF9800',
+                lineWidth: 2,
+                title: 'Maximum',
+            });
+
+            series.stddev = chart.addLineSeries({
+                color: '#9C27B0',
+                lineWidth: 2,
+                title: 'Std Deviation',
+            });
+
+            // Handle window resize
+            window.addEventListener('resize', () => {
+                chart.applyOptions({
+                    width: chartContainer.clientWidth
+                });
+            });
+        }
 
         async function fetchData(startDate, endDate) {
             let url = '/api/stats';
@@ -145,115 +337,42 @@
             return await response.json();
         }
 
-        function createCombinedChart(ctx, data) {
-            const datasets = [
-                {
-                    label: 'Minimum (ms)',
-                    data: data.map(d => d.min),
-                    borderColor: '#4CAF50',
-                    backgroundColor: '#4CAF5020',
-                    tension: 0.1,
-                    fill: false,
-                    hidden: !document.getElementById('showMin').checked
-                },
-                {
-                    label: 'Average (ms)',
-                    data: data.map(d => d.avg),
-                    borderColor: '#2196F3',
-                    backgroundColor: '#2196F320',
-                    tension: 0.1,
-                    fill: false,
-                    hidden: !document.getElementById('showAvg').checked
-                },
-                {
-                    label: 'Maximum (ms)',
-                    data: data.map(d => d.max),
-                    borderColor: '#FF9800',
-                    backgroundColor: '#FF980020',
-                    tension: 0.1,
-                    fill: false,
-                    hidden: !document.getElementById('showMax').checked
-                },
-                {
-                    label: 'Std Deviation (ms)',
-                    data: data.map(d => d.stddev),
-                    borderColor: '#9C27B0',
-                    backgroundColor: '#9C27B020',
-                    tension: 0.1,
-                    fill: false,
-                    hidden: !document.getElementById('showStddev').checked
-                }
-            ];
-
-            return new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: data.map(d => new Date(d.timestamp).toLocaleString()),
-                    datasets: datasets
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    animation: false,
-                    plugins: {
-                        title: {
-                            display: true,
-                            text: 'Ping Statistics Over Time',
-                            font: {
-                                size: 18
-                            }
-                        },
-                        legend: {
-                            display: true,
-                            position: 'top'
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: false,
-                            title: {
-                                display: true,
-                                text: 'Latency (ms)'
-                            }
-                        },
-                        x: {
-                            title: {
-                                display: true,
-                                text: 'Time'
-                            }
-                        }
-                    }
-                }
-            });
-        }
-
-        async function updateCharts(startDate, endDate) {
+        async function updateChart(startDate, endDate) {
             const data = await fetchData(startDate, endDate);
 
-            // Destroy existing chart
-            if (chart) {
-                chart.destroy();
-            }
+            // Convert data to Lightweight Charts format
+            const minData = [];
+            const avgData = [];
+            const maxData = [];
+            const stddevData = [];
 
-            chart = createCombinedChart(
-                document.getElementById('combinedChart').getContext('2d'),
-                data
-            );
+            data.forEach(d => {
+                const time = Math.floor(new Date(d.timestamp).getTime() / 1000);
+                minData.push({ time, value: d.min });
+                avgData.push({ time, value: d.avg });
+                maxData.push({ time, value: d.max });
+                stddevData.push({ time, value: d.stddev });
+            });
+
+            // Update series data
+            series.min.setData(minData);
+            series.avg.setData(avgData);
+            series.max.setData(maxData);
+            series.stddev.setData(stddevData);
+
+            // Fit content
+            chart.timeScale().fitContent();
         }
 
-        function toggleDataset(datasetName) {
-            if (!chart) return;
+        function toggleSeries(seriesName) {
+            const checkbox = document.getElementById('show' + seriesName.charAt(0).toUpperCase() + seriesName.slice(1));
+            const lineSeries = series[seriesName];
 
-            const datasetIndex = {
-                'min': 0,
-                'avg': 1,
-                'max': 2,
-                'stddev': 3
-            }[datasetName];
-
-            const meta = chart.getDatasetMeta(datasetIndex);
-            meta.hidden = !meta.hidden;
-            chart.update();
+            if (checkbox.checked) {
+                lineSeries.applyOptions({ visible: true });
+            } else {
+                lineSeries.applyOptions({ visible: false });
+            }
         }
 
         function applyFilter() {
@@ -275,7 +394,7 @@
                 autoRefreshInterval = null;
             }
 
-            updateCharts(startISO, endISO);
+            updateChart(startISO, endISO);
         }
 
         function resetFilter() {
@@ -283,15 +402,16 @@
             document.getElementById('endDate').value = '';
 
             // Restart auto-refresh
-            updateCharts();
+            updateChart();
             if (!autoRefreshInterval) {
-                autoRefreshInterval = setInterval(() => updateCharts(), 5000);
+                autoRefreshInterval = setInterval(() => updateChart(), 5000);
             }
         }
 
-        // Initialize with recent data and auto-refresh
-        updateCharts();
-        autoRefreshInterval = setInterval(() => updateCharts(), 5000);
+        // Initialize chart and load data
+        initChart();
+        updateChart();
+        autoRefreshInterval = setInterval(() => updateChart(), 5000);
     </script>
 </body>
 </html>
