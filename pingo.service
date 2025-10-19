@@ -1,0 +1,17 @@
+[Unit]
+Description=Pingo - Ping Statistics Monitor
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/pingo
+Restart=always
+RestartSec=10
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=pingo
+
+[Install]
+WantedBy=multi-user.target
