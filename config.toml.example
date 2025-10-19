@@ -1,0 +1,18 @@
+# Pingo Configuration File
+# Copy this file to ~/.config/pingo/config.toml and customize as needed
+
+# Web server port
+port = "7777"
+
+# Target host to ping
+target = "8.8.8.8"
+
+# Number of pings per round
+ping_count = 30
+
+# Number of days to retain ping data in the database
+retention_days = 30
+
+# Path to SQLite database file
+# Default: ~/.local/share/pingo/ping_stats.db
+# db_path = "/custom/path/to/ping_stats.db"

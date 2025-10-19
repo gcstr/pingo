@@ -1,0 +1,39 @@
+# Binaries
+pingo
+pingo-arm64
+pingo-arm
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.service
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# Go workspace file
+go.work
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+
+# IDE/Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Config files (user-specific)
+config.toml
+
+# Build artifacts
+dist/
+build/
