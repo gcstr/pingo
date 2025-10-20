@@ -42,6 +42,15 @@
 
         nav ul {
             align-items: center;
+            justify-content: center;
+        }
+
+        nav ul:first-child {
+            justify-content: flex-start;
+        }
+
+        nav ul:last-child {
+            justify-content: flex-end;
         }
 
         nav h1 {
@@ -49,11 +58,25 @@
             margin: 0;
         }
 
-        /* Theme toggle button */
+        /* Nav buttons */
         #themeToggle {
             padding: 0.5rem;
             width: auto;
             margin: 0;
+        }
+
+        nav [role="group"] {
+            margin: 0;
+        }
+
+        nav [role="group"] button {
+            margin: 0;
+        }
+
+        nav [role="group"] button.active {
+            background-color: var(--pico-primary);
+            color: var(--pico-primary-inverse);
+            border-color: var(--pico-primary);
         }
 
         /* Chart Card */
@@ -113,6 +136,14 @@
     <nav class="container-fluid">
         <ul>
             <li><h1>Pingo</h1></li>
+        </ul>
+        <ul>
+            <li>
+                <div role="group">
+                    <button class="outline" id="simpleChartBtn">Simple</button>
+                    <button class="outline" id="lineChartBtn">Full</button>
+                </div>
+            </li>
         </ul>
         <ul>
             <li>
@@ -199,9 +230,48 @@
         // Chart variables
         let chart = null;
         let series = {};
-        let autoRefreshInterval = null;
+        let simpleSeries = null;
         let lastTimestamp = null; // Track last timestamp for incremental polling
         let hasSetInitialZoom = false; // Track if we've set the initial 10-minute zoom
+        let chartType = localStorage.getItem('chartType') || 'simple'; // 'simple' or 'line'
+
+        // Chart type toggle
+        const simpleChartBtn = document.getElementById('simpleChartBtn');
+        const lineChartBtn = document.getElementById('lineChartBtn');
+        const metricsControls = document.querySelector('.metrics-controls');
+
+        function updateChartTypeButtons() {
+            simpleChartBtn.classList.remove('active');
+            lineChartBtn.classList.remove('active');
+
+            if (chartType === 'simple') {
+                simpleChartBtn.classList.add('active');
+                if (metricsControls) metricsControls.style.display = 'none';
+            } else {
+                lineChartBtn.classList.add('active');
+                if (metricsControls) metricsControls.style.display = 'flex';
+            }
+        }
+
+        updateChartTypeButtons();
+
+        simpleChartBtn.addEventListener('click', () => {
+            if (chartType !== 'simple') {
+                chartType = 'simple';
+                localStorage.setItem('chartType', chartType);
+                updateChartTypeButtons();
+                switchChartType();
+            }
+        });
+
+        lineChartBtn.addEventListener('click', () => {
+            if (chartType !== 'line') {
+                chartType = 'line';
+                localStorage.setItem('chartType', chartType);
+                updateChartTypeButtons();
+                switchChartType();
+            }
+        });
 
         // Convert timestamp to display local time within UTC time scale
         // Lightweight Charts doesn't support timezones natively, so we need to
@@ -224,13 +294,14 @@
                 layout: {
                     background: { color: 'transparent' },
                     textColor: '#d1d4dc',
+                    attributionLogo: false,
                 },
                 grid: {
                     vertLines: { color: 'rgba(128, 128, 128, 0.1)' },
                     horzLines: { color: 'rgba(128, 128, 128, 0.1)' },
                 },
                 crosshair: {
-                    mode: LightweightCharts.CrosshairMode.Normal,
+                    mode: LightweightCharts.CrosshairMode.Magnet,
                 },
                 rightPriceScale: {
                     borderColor: 'rgba(128, 128, 128, 0.2)',
@@ -244,36 +315,47 @@
                 },
             });
 
-            // Create series for each metric
-            // Lightweight Charts v5 uses addSeries(SeriesType, options)
-            // lineType: 0 = Simple, 1 = WithSteps, 2 = Curved
-            series.min = chart.addSeries(LightweightCharts.LineSeries, {
-                color: '#4CAF50',
-                lineWidth: 2,
-                lineType: 2,
-                title: 'Minimum',
-            });
+            // Create series based on chart type
+            if (chartType === 'simple') {
+                // Simple chart - just average as area
+                simpleSeries = chart.addSeries(LightweightCharts.AreaSeries, {
+                    topColor: 'rgba(33, 150, 243, 0.4)',
+                    bottomColor: 'rgba(33, 150, 243, 0.05)',
+                    lineColor: 'rgba(33, 150, 243, 0.8)',
+                    lineWidth: 2,
+                    lineType: 2,
+                    title: 'Average',
+                });
+            } else if (chartType === 'line') {
+                // Create line series for each metric
+                series.min = chart.addSeries(LightweightCharts.LineSeries, {
+                    color: '#4CAF50',
+                    lineWidth: 2,
+                    lineType: 2,
+                    title: 'Minimum',
+                });
 
-            series.avg = chart.addSeries(LightweightCharts.LineSeries, {
-                color: '#2196F3',
-                lineWidth: 2,
-                lineType: 2,
-                title: 'Average',
-            });
+                series.avg = chart.addSeries(LightweightCharts.LineSeries, {
+                    color: '#2196F3',
+                    lineWidth: 2,
+                    lineType: 2,
+                    title: 'Average',
+                });
 
-            series.max = chart.addSeries(LightweightCharts.LineSeries, {
-                color: '#FF9800',
-                lineWidth: 2,
-                lineType: 2,
-                title: 'Maximum',
-            });
+                series.max = chart.addSeries(LightweightCharts.LineSeries, {
+                    color: '#FF9800',
+                    lineWidth: 2,
+                    lineType: 2,
+                    title: 'Maximum',
+                });
 
-            series.stddev = chart.addSeries(LightweightCharts.LineSeries, {
-                color: '#9C27B0',
-                lineWidth: 2,
-                lineType: 2,
-                title: 'Std Deviation',
-            });
+                series.stddev = chart.addSeries(LightweightCharts.LineSeries, {
+                    color: '#9C27B0',
+                    lineWidth: 2,
+                    lineType: 2,
+                    title: 'Std Deviation',
+                });
+            }
 
             // Handle container resize (both grow and shrink)
             const resizeObserver = new ResizeObserver(entries => {
@@ -288,18 +370,11 @@
             resizeObserver.observe(chartContainer);
         }
 
-        async function fetchData(startDate, endDate, since) {
+        async function fetchData(since) {
             let url = '/api/stats';
-            const params = new URLSearchParams();
-
-            if (startDate && endDate) {
-                params.append('start', startDate);
-                params.append('end', endDate);
-            } else if (since) {
+            if (since) {
+                const params = new URLSearchParams();
                 params.append('since', since);
-            }
-
-            if (params.toString()) {
                 url += '?' + params.toString();
             }
 
@@ -307,14 +382,14 @@
             return await response.json();
         }
 
-        async function updateChart(startDate, endDate, isInitialLoad = false) {
+        async function updateChart(isInitialLoad = false) {
             try {
                 // For incremental updates, only fetch data since last timestamp
-                const since = (!startDate && !endDate && !isInitialLoad && lastTimestamp)
+                const since = (!isInitialLoad && lastTimestamp)
                     ? lastTimestamp
                     : null;
 
-                const data = await fetchData(startDate, endDate, since);
+                const data = await fetchData(since);
 
                 // Check if data exists and is an array
                 if (!data || !Array.isArray(data)) {
@@ -384,9 +459,8 @@
 
                 // Only update if we have valid data
                 if (minData.length > 0) {
-                    // For filtered views or initial load, replace all data
-                    // For incremental updates, append new data
-                    const isFullReload = startDate || endDate || isInitialLoad;
+                    // For initial load, replace all data; otherwise append
+                    const isFullReload = isInitialLoad;
 
                     if (isFullReload) {
                         // Validate all data before setting
@@ -420,10 +494,16 @@
 
                         // Replace all data
                         try {
-                            series.min.setData(minData);
-                            series.avg.setData(avgData);
-                            series.max.setData(maxData);
-                            series.stddev.setData(stddevData);
+                            if (chartType === 'simple') {
+                                // Simple mode - just average
+                                simpleSeries.setData(avgData);
+                            } else {
+                                // Line mode
+                                series.min.setData(minData);
+                                series.avg.setData(avgData);
+                                series.max.setData(maxData);
+                                series.stddev.setData(stddevData);
+                            }
                         } catch (e) {
                             console.error('Error setting data:', e);
                             console.error('Data length:', minData.length);
@@ -433,15 +513,10 @@
                         }
 
                         // Check if this is a user-requested filter
-                        const isUserFilter = startDate && endDate && !isInitialLoad;
-
-                        if (isUserFilter) {
-                            // Fit content when user applies a filter
-                            chart.timeScale().fitContent();
-                        } else if (!hasSetInitialZoom && minData.length > 0) {
+                        if (!hasSetInitialZoom && minData.length > 0) {
                             // On initial load, zoom to last 10 minutes (only once)
                             const lastTime = minData[minData.length - 1].time;
-                            const tenMinutesInSeconds = 10 * 60;
+                            const tenMinutesInSeconds = 5 * 60;
                             const startTime = lastTime - tenMinutesInSeconds;
                             chart.timeScale().setVisibleRange({
                                 from: startTime,
@@ -451,15 +526,22 @@
                         }
                     } else {
                         // Incremental update - append new points
-                        for (let i = 0; i < minData.length; i++) {
-                            series.min.update(minData[i]);
-                            series.avg.update(avgData[i]);
-                            series.max.update(maxData[i]);
-                            series.stddev.update(stddevData[i]);
+                        if (chartType === 'simple') {
+                            for (let i = 0; i < minData.length; i++) {
+                                simpleSeries.update(avgData[i]);
+                            }
+                        } else {
+                            // Line mode
+                            for (let i = 0; i < minData.length; i++) {
+                                series.min.update(minData[i]);
+                                series.avg.update(avgData[i]);
+                                series.max.update(maxData[i]);
+                                series.stddev.update(stddevData[i]);
+                            }
                         }
                     }
                 } else {
-                    console.warn('No valid data points after filtering');
+                    console.warn('No valid data points available');
                 }
             } catch (error) {
                 console.error('Error updating chart:', error);
@@ -496,49 +578,37 @@
             });
         }
 
-        function applyFilter() {
-            const startDate = document.getElementById('startDate').value;
-            const endDate = document.getElementById('endDate').value;
-
-            if (!startDate || !endDate) {
-                alert('Please select both start and end dates');
-                return;
+        // Switch between chart types
+        function switchChartType() {
+            // Remove the chart
+            if (chart) {
+                chart.remove();
+                chart = null;
             }
 
-            // Convert to ISO format with seconds for SQLite
-            const startISO = startDate + ':00';
-            const endISO = endDate + ':59';
-
-            // Stop auto-refresh when filtering
-            if (autoRefreshInterval) {
-                clearInterval(autoRefreshInterval);
-                autoRefreshInterval = null;
-            }
-
-            updateChart(startISO, endISO);
-        }
-
-        function resetFilter() {
-            document.getElementById('startDate').value = '';
-            document.getElementById('endDate').value = '';
-
-            // Reset zoom flag so it zooms to 10 minutes again
+            // Reset series
+            series = {};
+            simpleSeries = null;
             hasSetInitialZoom = false;
 
-            // Restart auto-refresh with initial load
-            updateChart(null, null, true);
-            if (!autoRefreshInterval) {
-                autoRefreshInterval = setInterval(() => updateChart(), 5000);
-            }
+            // Reinitialize chart with new type
+            initChart();
+
+            // Reload data
+            updateChart(true).then(() => {
+                if (chartType === 'line') {
+                    restoreCheckboxStates();
+                }
+            });
         }
 
         // Initialize chart and load data
         initChart();
-        updateChart(null, null, true).then(() => {
+        updateChart(true).then(() => {
             // Restore checkbox states after initial data load
             restoreCheckboxStates();
         });
-        autoRefreshInterval = setInterval(() => updateChart(), 5000); // Poll for new data every 5s
+        setInterval(() => updateChart(), 5000); // Poll for new data every 5s
     </script>
 </body>
 </html>
