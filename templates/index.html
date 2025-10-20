@@ -85,7 +85,12 @@
 
         details ul li {
             list-style: none;
-            padding: 0.5rem 0;
+            padding: 0;
+            margin: 0;
+        }
+
+        details ul li:not(:last-child) {
+            margin-bottom: 0.75rem;
         }
 
         details ul li label {
@@ -94,19 +99,20 @@
             gap: 0.5rem;
             margin: 0;
             cursor: pointer;
+            padding: 0;
         }
 
         /* Filter dropdown content */
         details .filter-form {
             position: absolute;
-            right: 0;
+            left: 0;
             top: 100%;
             margin-top: 0.5rem;
             background: var(--pico-card-background-color);
             border: 1px solid var(--pico-muted-border-color);
             border-radius: var(--pico-border-radius);
             padding: 1.5rem;
-            min-width: 350px;
+            min-width: 550px;
             box-shadow: var(--pico-card-box-shadow);
             z-index: 99;
         }
@@ -183,39 +189,12 @@
     <!-- Navigation -->
     <nav class="container-fluid">
         <ul>
-            <li><h1>🌐 Pingo Monitor</h1></li>
+            <li><h1>Pingo</h1></li>
         </ul>
         <ul>
             <li>
-                <div class="status-indicator">
-                    <div class="pulse"></div>
-                    <span>Auto-refresh: 5s</span>
-                </div>
-            </li>
-            <li>
                 <details role="list">
-                    <summary aria-haspopup="listbox" role="button">📅 Filter</summary>
-                    <div class="filter-form">
-                        <div class="grid">
-                            <label>
-                                From:
-                                <input type="datetime-local" id="startDate" name="startDate">
-                            </label>
-                            <label>
-                                To:
-                                <input type="datetime-local" id="endDate" name="endDate">
-                            </label>
-                        </div>
-                        <div class="button-group">
-                            <button onclick="applyFilter()">Apply</button>
-                            <button onclick="resetFilter()" class="secondary">Reset</button>
-                        </div>
-                    </div>
-                </details>
-            </li>
-            <li>
-                <details role="list">
-                    <summary aria-haspopup="listbox" role="button">🎛️ Metrics</summary>
+                    <summary aria-haspopup="listbox" role="button" class="outline">Metrics</summary>
                     <ul role="listbox">
                         <li>
                             <label>
@@ -248,18 +227,8 @@
     </nav>
 
     <main class="container">
-        <!-- Header -->
-        <header>
-            <p>Real-time network latency statistics</p>
-        </header>
-
         <!-- Chart -->
-        <article>
-            <header>
-                <strong>📊 Ping Statistics Over Time</strong>
-            </header>
-            <div id="chart" class="chart-container"></div>
-        </article>
+        <div id="chart" class="chart-container"></div>
     </main>
 
     <script>
@@ -299,24 +268,28 @@
             series.min = chart.addLineSeries({
                 color: '#4CAF50',
                 lineWidth: 2,
+                lineType: 2,
                 title: 'Minimum',
             });
 
             series.avg = chart.addLineSeries({
                 color: '#2196F3',
                 lineWidth: 2,
+                lineType: 2,
                 title: 'Average',
             });
 
             series.max = chart.addLineSeries({
                 color: '#FF9800',
                 lineWidth: 2,
+                lineType: 2,
                 title: 'Maximum',
             });
 
             series.stddev = chart.addLineSeries({
                 color: '#9C27B0',
                 lineWidth: 2,
+                lineType: 2,
                 title: 'Std Deviation',
             });
 
