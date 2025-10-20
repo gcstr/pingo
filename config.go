@@ -44,13 +44,13 @@ func getDefaultDBPath() string {
 }
 
 func getDefaultConfig() Config {
-	return Config{
-		Port:          "7777",
-		Target:        "8.8.8.8",
-		PingCount:     30,
-		RetentionDays: 30,
-		DBPath:        getDefaultDBPath(),
-	}
+    return Config{
+        Port:          "7777",
+        Target:        "8.8.8.8",
+        PingCount:     5,
+        RetentionDays: 15,
+        DBPath:        getDefaultDBPath(),
+    }
 }
 
 func loadConfig(configPath string) (Config, error) {

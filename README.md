@@ -116,8 +116,8 @@ Pingo follows XDG Base Directory specifications:
 |---------|---------|-------------|
 | `port` | `7777` | Web server port |
 | `target` | `8.8.8.8` | Host to ping |
-| `ping_count` | `30` | Number of pings per round |
-| `retention_days` | `30` | Days to retain data |
+| `ping_count` | `5` | Number of pings per round |
+| `retention_days` | `15` | Days to retain data |
 | `db_path` | `~/.local/share/pingo/ping_stats.db` | Database file path |
 
 ### Configuration Methods (in priority order)

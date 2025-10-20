@@ -7,7 +7,7 @@ import (
 )
 
 func TestGetDefaultConfig(t *testing.T) {
-	config := getDefaultConfig()
+    config := getDefaultConfig()
 
 	if config.Port != "7777" {
 		t.Errorf("Expected default port 7777, got %s", config.Port)
@@ -15,12 +15,12 @@ func TestGetDefaultConfig(t *testing.T) {
 	if config.Target != "8.8.8.8" {
 		t.Errorf("Expected default target 8.8.8.8, got %s", config.Target)
 	}
-	if config.PingCount != 30 {
-		t.Errorf("Expected default ping count 30, got %d", config.PingCount)
-	}
-	if config.RetentionDays != 30 {
-		t.Errorf("Expected default retention days 30, got %d", config.RetentionDays)
-	}
+    if config.PingCount != 5 {
+        t.Errorf("Expected default ping count 5, got %d", config.PingCount)
+    }
+    if config.RetentionDays != 15 {
+        t.Errorf("Expected default retention days 15, got %d", config.RetentionDays)
+    }
 }
 
 func TestLoadConfigNonExistent(t *testing.T) {

@@ -2,10 +2,12 @@ module github.com/gcstr/pingo
 
 go 1.25.3
 
-require modernc.org/sqlite v1.39.1
+require (
+	github.com/BurntSushi/toml v1.5.0
+	modernc.org/sqlite v1.39.1
+)
 
 require (
-	github.com/BurntSushi/toml v1.5.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect

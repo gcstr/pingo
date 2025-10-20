@@ -8,10 +8,10 @@ port = "7777"
 target = "8.8.8.8"
 
 # Number of pings per round
-ping_count = 30
+ping_count = 5
 
 # Number of days to retain ping data in the database
-retention_days = 30
+retention_days = 15
 
 # Path to SQLite database file
 # Default: ~/.local/share/pingo/ping_stats.db
