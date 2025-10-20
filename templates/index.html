@@ -233,6 +233,7 @@
         let series = {};
         let autoRefreshInterval = null;
         let lastTimestamp = null; // Track last timestamp for incremental polling
+        let hasSetInitialZoom = false; // Track if we've set the initial 10-minute zoom
 
         // Convert timestamp to display local time within UTC time scale
         // Lightweight Charts doesn't support timezones natively, so we need to
@@ -278,32 +279,31 @@
             // Create series for each metric
             // Lightweight Charts v5 uses addSeries(SeriesType, options)
             // lineType: 0 = Simple, 1 = WithSteps, 2 = Curved
-            // Note: Curved lines (lineType: 2) may cause "Value is null" errors with large datasets
             series.min = chart.addSeries(LightweightCharts.LineSeries, {
                 color: '#4CAF50',
                 lineWidth: 2,
-                // lineType: 2, // Curved - disabled due to errors
+                lineType: 2,
                 title: 'Minimum',
             });
 
             series.avg = chart.addSeries(LightweightCharts.LineSeries, {
                 color: '#2196F3',
                 lineWidth: 2,
-                // lineType: 2, // Curved - disabled due to errors
+                lineType: 2,
                 title: 'Average',
             });
 
             series.max = chart.addSeries(LightweightCharts.LineSeries, {
                 color: '#FF9800',
                 lineWidth: 2,
-                // lineType: 2, // Curved - disabled due to errors
+                lineType: 2,
                 title: 'Maximum',
             });
 
             series.stddev = chart.addSeries(LightweightCharts.LineSeries, {
                 color: '#9C27B0',
                 lineWidth: 2,
-                // lineType: 2, // Curved - disabled due to errors
+                lineType: 2,
                 title: 'Std Deviation',
             });
 
@@ -416,8 +416,6 @@
                     const isFullReload = startDate || endDate || isInitialLoad;
 
                     if (isFullReload) {
-                        console.log(`Loading ${minData.length} data points`);
-
                         // Validate all data before setting
                         const validateData = (data, name) => {
                             const seenTimes = new Set();
@@ -461,13 +459,25 @@
                             throw e;
                         }
 
-                        // Fit content only when filtering
-                        if (startDate && endDate) {
+                        // Check if this is a user-requested filter
+                        const isUserFilter = startDate && endDate && !isInitialLoad;
+
+                        if (isUserFilter) {
+                            // Fit content when user applies a filter
                             chart.timeScale().fitContent();
+                        } else if (!hasSetInitialZoom && minData.length > 0) {
+                            // On initial load, zoom to last 10 minutes (only once)
+                            const lastTime = minData[minData.length - 1].time;
+                            const tenMinutesInSeconds = 10 * 60;
+                            const startTime = lastTime - tenMinutesInSeconds;
+                            chart.timeScale().setVisibleRange({
+                                from: startTime,
+                                to: lastTime
+                            });
+                            hasSetInitialZoom = true;
                         }
                     } else {
                         // Incremental update - append new points
-                        console.log(`Adding ${minData.length} new data point(s)`);
                         for (let i = 0; i < minData.length; i++) {
                             series.min.update(minData[i]);
                             series.avg.update(avgData[i]);
@@ -519,6 +529,9 @@
         function resetFilter() {
             document.getElementById('startDate').value = '';
             document.getElementById('endDate').value = '';
+
+            // Reset zoom flag so it zooms to 10 minutes again
+            hasSetInitialZoom = false;
 
             // Restart auto-refresh with initial load
             updateChart(null, null, true);
