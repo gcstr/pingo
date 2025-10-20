@@ -1,8 +1,10 @@
 # Pingo - Ping Statistics Monitor
 
-A lightweight network monitoring tool designed for Raspberry Pi that continuously pings a target host and visualizes latency statistics over time.
+An ultra-lightweight network monitoring tool designed with Raspberry Pi in mind. It continuously pings a target host and visualizes latency statistics over time.
 
-Optimized to run on resource-constrained devices like Raspberry Pi Zero, but also works on other platforms (Linux, macOS).
+Optimized to run on resource-constrained devices like the Pi Zero, but also works on other platforms.
+
+![screenshot](pingo.png)
 
 ## Features
 
@@ -12,26 +14,29 @@ Optimized to run on resource-constrained devices like Raspberry Pi Zero, but als
 - **Flexible Configuration**: TOML config file support with CLI overrides
 - **Cross-Platform**: Optimized for Raspberry Pi, also runs on other Linux distributions and macOS
 - **Single Binary**: No external dependencies, embeds web UI
-- **Lightweight**: Minimal resource usage, perfect for Raspberry Pi Zero
+- **Lightweight**: Minimal resource usage
 
 ## Installation
 
 ### Raspberry Pi / Debian-based Systems
 
-Download and install the `.deb` package for automatic setup:
+Download and install the `.deb` package for automatic setup.
+
+> [!TIP]
+> Check out the [Release Notes](https://github.com/gcstr/pingo/releases/latest) for the latest version 
 
 ```bash
 # Raspberry Pi (ARM64 - Raspberry Pi 3/4/5)
-wget https://github.com/gcstr/pingo/releases/latest/download/pingo_0.1.0_linux_arm64.deb
-sudo dpkg -i pingo_0.1.0_linux_arm64.deb
+wget https://github.com/gcstr/pingo/releases/latest/download/pingo_0.4.0_linux_arm64.deb
+sudo dpkg -i pingo_0.4.0_linux_arm64.deb
 
 # Raspberry Pi (ARMv7 - Raspberry Pi Zero/2)
-wget https://github.com/gcstr/pingo/releases/latest/download/pingo_0.1.0_linux_armv7.deb
-sudo dpkg -i pingo_0.1.0_linux_armv7.deb
+wget https://github.com/gcstr/pingo/releases/latest/download/pingo_0.4.0_linux_armv7.deb
+sudo dpkg -i pingo_0.4.0_linux_armv7.deb
 
 # x86_64 Linux
-wget https://github.com/gcstr/pingo/releases/latest/download/pingo_0.1.0_linux_amd64.deb
-sudo dpkg -i pingo_0.1.0_linux_amd64.deb
+wget https://github.com/gcstr/pingo/releases/latest/download/pingo_0.4.0_linux_amd64.deb
+sudo dpkg -i pingo_0.4.0_linux_amd64.deb
 ```
 
 The `.deb` package will:
@@ -44,12 +49,12 @@ The `.deb` package will:
 
 ```bash
 # ARM64
-wget https://github.com/gcstr/pingo/releases/latest/download/pingo_0.1.0_linux_arm64.rpm
-sudo rpm -i pingo_0.1.0_linux_arm64.rpm
+wget https://github.com/gcstr/pingo/releases/latest/download/pingo_0.4.0_linux_arm64.rpm
+sudo rpm -i pingo_0.4.0_linux_arm64.rpm
 
 # x86_64
-wget https://github.com/gcstr/pingo/releases/latest/download/pingo_0.1.0_linux_amd64.rpm
-sudo rpm -i pingo_0.1.0_linux_amd64.rpm
+wget https://github.com/gcstr/pingo/releases/latest/download/pingo_0.4.0_linux_amd64.rpm
+sudo rpm -i pingo_0.4.0_linux_amd64.rpm
 ```
 
 ### Manual Installation (macOS / Other Linux)
@@ -58,7 +63,7 @@ Download the appropriate archive for your platform:
 
 ```bash
 # Extract the archive
-tar xzf pingo_0.1.0_*.tar.gz
+tar xzf pingo_0.4.0_*.tar.gz
 
 # Run with defaults
 ./pingo
@@ -116,9 +121,15 @@ Pingo follows XDG Base Directory specifications:
 |---------|---------|-------------|
 | `port` | `7777` | Web server port |
 | `target` | `8.8.8.8` | Host to ping |
-| `ping_count` | `5` | Number of pings per round |
+| `ping_count` | `5` | Number of pings per round * |
 | `retention_days` | `15` | Days to retain data |
 | `db_path` | `~/.local/share/pingo/ping_stats.db` | Database file path |
+
+> \* Pings will be grouped per round, and only one row with `max`, `min`, `avg`, and `stddev` will be saved to the database per round.
+> A higher count means lower resolution, but also a smaller database.
+
+> [!WARNING]
+> Increasing retention and/or reducing ping count will increase database size
 
 ### Configuration Methods (in priority order)
 
