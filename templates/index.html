@@ -234,6 +234,16 @@
         let autoRefreshInterval = null;
         let lastUpdateTime = 0; // Track last data point time
 
+        // Convert timestamp to display local time within UTC time scale
+        // Lightweight Charts doesn't support timezones natively, so we need to
+        // adjust timestamps to make local time appear correctly on the UTC scale
+        function timeToLocal(originalTime) {
+            const d = new Date(originalTime * 1000);
+            return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(),
+                           d.getHours(), d.getMinutes(), d.getSeconds(),
+                           d.getMilliseconds()) / 1000;
+        }
+
         // Initialize chart
         function initChart() {
             const chartContainer = document.getElementById('chart');
@@ -259,6 +269,8 @@
                     borderColor: 'rgba(128, 128, 128, 0.2)',
                     timeVisible: true,
                     secondsVisible: false,
+                    // Use browser's local timezone for display
+                    // Lightweight Charts uses UTC by default, but our timestamps are already in local time
                 },
             });
 
@@ -351,7 +363,10 @@
                         continue;
                     }
 
-                    const time = Math.floor(new Date(d.timestamp).getTime() / 1000);
+                    // Parse timestamp and convert to local time display
+                    // Lightweight Charts uses UTC internally, so we adjust to show local time
+                    const utcTime = Math.floor(new Date(d.timestamp).getTime() / 1000);
+                    const time = timeToLocal(utcTime);
 
                     // Skip if time is invalid
                     if (isNaN(time) || time <= 0) {
