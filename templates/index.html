@@ -277,31 +277,32 @@
             // Create series for each metric
             // Lightweight Charts v5 uses addSeries(SeriesType, options)
             // lineType: 0 = Simple, 1 = WithSteps, 2 = Curved
+            // Note: Curved lines (lineType: 2) may cause "Value is null" errors with large datasets
             series.min = chart.addSeries(LightweightCharts.LineSeries, {
                 color: '#4CAF50',
                 lineWidth: 2,
-                lineType: 2, // Curved
+                // lineType: 2, // Curved - disabled due to errors
                 title: 'Minimum',
             });
 
             series.avg = chart.addSeries(LightweightCharts.LineSeries, {
                 color: '#2196F3',
                 lineWidth: 2,
-                lineType: 2, // Curved
+                // lineType: 2, // Curved - disabled due to errors
                 title: 'Average',
             });
 
             series.max = chart.addSeries(LightweightCharts.LineSeries, {
                 color: '#FF9800',
                 lineWidth: 2,
-                lineType: 2, // Curved
+                // lineType: 2, // Curved - disabled due to errors
                 title: 'Maximum',
             });
 
             series.stddev = chart.addSeries(LightweightCharts.LineSeries, {
                 color: '#9C27B0',
                 lineWidth: 2,
-                lineType: 2, // Curved
+                // lineType: 2, // Curved - disabled due to errors
                 title: 'Std Deviation',
             });
 
@@ -388,8 +389,12 @@
                     const time = timeToLocal(utcTime);
 
                     // Skip if time is invalid
-                    if (isNaN(time) || time <= 0) {
-                        console.warn('Invalid timestamp:', d.timestamp);
+                    if (isNaN(time) || time <= 0 || !isFinite(time)) {
+                        console.warn('Invalid time conversion:', {
+                            original: d.timestamp,
+                            utcTime,
+                            convertedTime: time
+                        });
                         continue;
                     }
 
