@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
 
     <!-- Lightweight Charts -->
-    <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+    <script src="https://unpkg.com/lightweight-charts@5/dist/lightweight-charts.standalone.production.js"></script>
 
     <style>
         :root {
@@ -232,6 +232,7 @@
         let chart = null;
         let series = {};
         let autoRefreshInterval = null;
+        let lastUpdateTime = 0; // Track last data point time
 
         // Initialize chart
         function initChart() {
@@ -262,31 +263,33 @@
             });
 
             // Create series for each metric
-            series.min = chart.addLineSeries({
+            // Lightweight Charts v5 uses addSeries(SeriesType, options)
+            // lineType: 0 = Simple, 1 = WithSteps, 2 = Curved
+            series.min = chart.addSeries(LightweightCharts.LineSeries, {
                 color: '#4CAF50',
                 lineWidth: 2,
-                lineType: 2,
+                lineType: 2, // Curved
                 title: 'Minimum',
             });
 
-            series.avg = chart.addLineSeries({
+            series.avg = chart.addSeries(LightweightCharts.LineSeries, {
                 color: '#2196F3',
                 lineWidth: 2,
-                lineType: 2,
+                lineType: 2, // Curved
                 title: 'Average',
             });
 
-            series.max = chart.addLineSeries({
+            series.max = chart.addSeries(LightweightCharts.LineSeries, {
                 color: '#FF9800',
                 lineWidth: 2,
-                lineType: 2,
+                lineType: 2, // Curved
                 title: 'Maximum',
             });
 
-            series.stddev = chart.addLineSeries({
+            series.stddev = chart.addSeries(LightweightCharts.LineSeries, {
                 color: '#9C27B0',
                 lineWidth: 2,
-                lineType: 2,
+                lineType: 2, // Curved
                 title: 'Std Deviation',
             });
 
@@ -307,12 +310,17 @@
             return await response.json();
         }
 
-        async function updateChart(startDate, endDate) {
+        async function updateChart(startDate, endDate, forceReload = false) {
             try {
                 const data = await fetchData(startDate, endDate);
 
                 // Check if data exists and is an array
-                if (!data || !Array.isArray(data) || data.length === 0) {
+                if (!data || !Array.isArray(data)) {
+                    console.warn('Invalid data format:', data);
+                    return;
+                }
+
+                if (data.length === 0) {
                     console.warn('No data available');
                     return;
                 }
@@ -323,34 +331,90 @@
                 const maxData = [];
                 const stddevData = [];
 
-                data.forEach(d => {
-                    // Skip entries with null/undefined values
-                    if (!d || d.min == null || d.avg == null || d.max == null || d.stddev == null || !d.timestamp) {
-                        return;
+                for (const d of data) {
+                    // Validate each field explicitly
+                    if (!d) continue;
+
+                    const min = parseFloat(d.min);
+                    const avg = parseFloat(d.avg);
+                    const max = parseFloat(d.max);
+                    const stddev = parseFloat(d.stddev);
+
+                    // Skip if any value is NaN or null
+                    if (isNaN(min) || isNaN(avg) || isNaN(max) || isNaN(stddev)) {
+                        console.warn('Skipping invalid data point:', d);
+                        continue;
+                    }
+
+                    if (!d.timestamp) {
+                        console.warn('Skipping data point without timestamp:', d);
+                        continue;
                     }
 
                     const time = Math.floor(new Date(d.timestamp).getTime() / 1000);
 
-                    // Validate time is a valid number
-                    if (isNaN(time)) {
-                        return;
+                    // Skip if time is invalid
+                    if (isNaN(time) || time <= 0) {
+                        console.warn('Invalid timestamp:', d.timestamp);
+                        continue;
                     }
 
-                    minData.push({ time, value: d.min });
-                    avgData.push({ time, value: d.avg });
-                    maxData.push({ time, value: d.max });
-                    stddevData.push({ time, value: d.stddev });
-                });
+                    minData.push({ time, value: min });
+                    avgData.push({ time, value: avg });
+                    maxData.push({ time, value: max });
+                    stddevData.push({ time, value: stddev });
+                }
 
                 // Only update if we have valid data
                 if (minData.length > 0) {
-                    series.min.setData(minData);
-                    series.avg.setData(avgData);
-                    series.max.setData(maxData);
-                    series.stddev.setData(stddevData);
+                    console.log(`Updating chart with ${minData.length} data points`);
 
-                    // Fit content
-                    chart.timeScale().fitContent();
+                    // Validate all data before setting
+                    const validateData = (data, name) => {
+                        for (let i = 0; i < data.length; i++) {
+                            const point = data[i];
+                            if (!point || point.time === null || point.time === undefined ||
+                                point.value === null || point.value === undefined ||
+                                isNaN(point.time) || isNaN(point.value)) {
+                                console.error(`Invalid ${name} data at index ${i}:`, point);
+                                return false;
+                            }
+                        }
+                        return true;
+                    };
+
+                    if (!validateData(minData, 'min') || !validateData(avgData, 'avg') ||
+                        !validateData(maxData, 'max') || !validateData(stddevData, 'stddev')) {
+                        console.error('Data validation failed, skipping update');
+                        return;
+                    }
+
+                    // Always use setData to avoid issues with update()
+                    try {
+                        series.min.setData(minData);
+                        series.avg.setData(avgData);
+                        series.max.setData(maxData);
+                        series.stddev.setData(stddevData);
+                    } catch (e) {
+                        console.error('Error setting data:', e);
+                        console.error('Sample minData:', minData.slice(0, 5));
+                        console.error('Sample avgData:', avgData.slice(0, 5));
+                        console.error('Sample maxData:', maxData.slice(0, 5));
+                        console.error('Sample stddevData:', stddevData.slice(0, 5));
+                        throw e;
+                    }
+
+                    // Update last timestamp
+                    if (minData.length > 0) {
+                        lastUpdateTime = minData[minData.length - 1].time;
+                    }
+
+                    // Fit content only when filtering
+                    if (startDate && endDate) {
+                        chart.timeScale().fitContent();
+                    }
+                } else {
+                    console.warn('No valid data points after filtering');
                 }
             } catch (error) {
                 console.error('Error updating chart:', error);
