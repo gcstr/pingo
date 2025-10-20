@@ -308,30 +308,53 @@
         }
 
         async function updateChart(startDate, endDate) {
-            const data = await fetchData(startDate, endDate);
+            try {
+                const data = await fetchData(startDate, endDate);
 
-            // Convert data to Lightweight Charts format
-            const minData = [];
-            const avgData = [];
-            const maxData = [];
-            const stddevData = [];
+                // Check if data exists and is an array
+                if (!data || !Array.isArray(data) || data.length === 0) {
+                    console.warn('No data available');
+                    return;
+                }
 
-            data.forEach(d => {
-                const time = Math.floor(new Date(d.timestamp).getTime() / 1000);
-                minData.push({ time, value: d.min });
-                avgData.push({ time, value: d.avg });
-                maxData.push({ time, value: d.max });
-                stddevData.push({ time, value: d.stddev });
-            });
+                // Convert data to Lightweight Charts format
+                const minData = [];
+                const avgData = [];
+                const maxData = [];
+                const stddevData = [];
 
-            // Update series data
-            series.min.setData(minData);
-            series.avg.setData(avgData);
-            series.max.setData(maxData);
-            series.stddev.setData(stddevData);
+                data.forEach(d => {
+                    // Skip entries with null/undefined values
+                    if (!d || d.min == null || d.avg == null || d.max == null || d.stddev == null || !d.timestamp) {
+                        return;
+                    }
 
-            // Fit content
-            chart.timeScale().fitContent();
+                    const time = Math.floor(new Date(d.timestamp).getTime() / 1000);
+
+                    // Validate time is a valid number
+                    if (isNaN(time)) {
+                        return;
+                    }
+
+                    minData.push({ time, value: d.min });
+                    avgData.push({ time, value: d.avg });
+                    maxData.push({ time, value: d.max });
+                    stddevData.push({ time, value: d.stddev });
+                });
+
+                // Only update if we have valid data
+                if (minData.length > 0) {
+                    series.min.setData(minData);
+                    series.avg.setData(avgData);
+                    series.max.setData(maxData);
+                    series.stddev.setData(stddevData);
+
+                    // Fit content
+                    chart.timeScale().fitContent();
+                }
+            } catch (error) {
+                console.error('Error updating chart:', error);
+            }
         }
 
         function toggleSeries(seriesName) {
