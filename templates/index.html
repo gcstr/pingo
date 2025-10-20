@@ -18,11 +18,20 @@
 
         body {
             padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
         }
 
         .container {
             max-width: 1400px;
             padding: 1rem;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            min-height: 0;
         }
 
         /* Navigation */
@@ -40,146 +49,56 @@
             margin: 0;
         }
 
-        /* Dropdown */
-        details {
-            position: relative;
-        }
-
-        details summary {
-            cursor: pointer;
-            list-style: none;
-        }
-
-        details summary::-webkit-details-marker {
-            display: none;
-        }
-
-        details[open] summary ~ * {
-            animation: slideDown 0.2s ease-out;
-        }
-
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        details ul {
-            position: absolute;
-            right: 0;
-            top: 100%;
-            margin-top: 0.5rem;
-            background: var(--pico-card-background-color);
-            border: 1px solid var(--pico-muted-border-color);
-            border-radius: var(--pico-border-radius);
+        /* Chart Card */
+        article {
             padding: 1rem;
-            min-width: 200px;
-            box-shadow: var(--pico-card-box-shadow);
-            z-index: 99;
+            flex: 1;
             display: flex;
             flex-direction: column;
-            align-items: flex-start;
-        }
-
-        details ul li {
-            list-style: none;
-            padding: 0.5rem 0;
-        }
-
-        details ul li label {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            margin: 0;
-            cursor: pointer;
-        }
-
-        /* Filter dropdown content */
-        details .filter-form {
-            position: absolute;
-            left: 0;
-            top: 100%;
-            margin-top: 0.5rem;
-            background: var(--pico-card-background-color);
-            border: 1px solid var(--pico-muted-border-color);
-            border-radius: var(--pico-border-radius);
-            padding: 1.5rem;
-            min-width: 550px;
-            box-shadow: var(--pico-card-box-shadow);
-            z-index: 99;
-        }
-
-        .filter-form .grid {
-            margin-bottom: 1rem;
-        }
-
-        .filter-form .grid > * {
-            margin-bottom: 0;
-        }
-
-        .filter-form .button-group {
-            display: flex;
-            gap: 0.5rem;
-        }
-
-        .filter-form .button-group button {
-            margin: 0;
-            flex: 1;
-        }
-
-        header {
-            text-align: center;
-            margin-bottom: 2rem;
-        }
-
-        header p {
-            color: var(--pico-muted-color);
-            margin: 0;
+            min-height: 0;
+            overflow: hidden;
         }
 
         .chart-container {
             position: relative;
-            height: 500px;
-            margin-top: 1rem;
+            flex: 1;
+            min-height: 0;
         }
 
-        .status-indicator {
-            display: inline-flex;
+        /* Metrics Controls */
+        .metrics-controls {
+            display: flex;
+            padding-top: 15px;
+            gap: 2rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .metrics-controls label {
+            display: flex;
             align-items: center;
             gap: 0.5rem;
-            font-size: 0.875rem;
-            color: var(--pico-muted-color);
+            margin: 0;
+            cursor: pointer;
         }
 
-        .pulse {
-            width: 8px;
-            height: 8px;
-            background: var(--pico-primary);
-            border-radius: 50%;
-            animation: pulse 2s ease-in-out infinite;
+        /* Metric color indicators - color the checkboxes */
+        #showMin {
+            --pico-background-color: #4CAF50;
+            --pico-border-color: #4CAF50;
         }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.3; }
+        #showAvg {
+            --pico-background-color: #2196F3;
+            --pico-border-color: #2196F3;
         }
-
-        article header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        #showMax {
+            --pico-background-color: #FF9800;
+            --pico-border-color: #FF9800;
         }
-
-        /* Metric color indicators */
-        .metric-min { color: #4CAF50; }
-        .metric-avg { color: #2196F3; }
-        .metric-max { color: #FF9800; }
-        .metric-std { color: #9C27B0; }
+        #showStddev {
+            --pico-background-color: #9C27B0;
+            --pico-border-color: #9C27B0;
+        }
     </style>
 </head>
 <body>
@@ -188,44 +107,35 @@
         <ul>
             <li><h1>Pingo</h1></li>
         </ul>
-        <ul>
-            <li>
-                <details role="list">
-                    <summary aria-haspopup="listbox" role="button" class="outline">Metrics</summary>
-                    <ul role="listbox">
-                        <li>
-                            <label>
-                                <input type="checkbox" id="showMin" checked onchange="toggleSeries('min')">
-                                <span class="metric-min">● Minimum</span>
-                            </label>
-                        </li>
-                        <li>
-                            <label>
-                                <input type="checkbox" id="showAvg" checked onchange="toggleSeries('avg')">
-                                <span class="metric-avg">● Average</span>
-                            </label>
-                        </li>
-                        <li>
-                            <label>
-                                <input type="checkbox" id="showMax" checked onchange="toggleSeries('max')">
-                                <span class="metric-max">● Maximum</span>
-                            </label>
-                        </li>
-                        <li>
-                            <label>
-                                <input type="checkbox" id="showStddev" checked onchange="toggleSeries('stddev')">
-                                <span class="metric-std">● Std Deviation</span>
-                            </label>
-                        </li>
-                    </ul>
-                </details>
-            </li>
-        </ul>
     </nav>
 
     <main class="container">
-        <!-- Chart -->
-        <div id="chart" class="chart-container"></div>
+        <!-- Chart Card -->
+        <article>
+            <div id="chart" class="chart-container"></div>
+
+            <!-- Metrics Toggles -->
+            <!-- <footer> -->
+                <div class="metrics-controls">
+                    <label>
+                        <input type="checkbox" id="showMin" checked onchange="toggleSeries('min')">
+                        <span>Minimum</span>
+                    </label>
+                    <label>
+                        <input type="checkbox" id="showAvg" checked onchange="toggleSeries('avg')">
+                        <span>Average</span>
+                    </label>
+                    <label>
+                        <input type="checkbox" id="showMax" checked onchange="toggleSeries('max')">
+                        <span>Maximum</span>
+                    </label>
+                    <label>
+                        <input type="checkbox" id="showStddev" checked onchange="toggleSeries('stddev')">
+                        <span>Std Deviation</span>
+                    </label>
+                </div>
+            <!-- </footer> -->
+        </article>
     </main>
 
     <script>
@@ -252,7 +162,7 @@
 
             chart = LightweightCharts.createChart(chartContainer, {
                 width: chartContainer.clientWidth,
-                height: 500,
+                height: chartContainer.clientHeight,
                 layout: {
                     background: { color: 'transparent' },
                     textColor: '#d1d4dc',
@@ -307,12 +217,17 @@
                 title: 'Std Deviation',
             });
 
-            // Handle window resize
-            window.addEventListener('resize', () => {
-                chart.applyOptions({
-                    width: chartContainer.clientWidth
-                });
+            // Handle container resize (both grow and shrink)
+            const resizeObserver = new ResizeObserver(entries => {
+                for (let entry of entries) {
+                    const { width, height } = entry.contentRect;
+                    chart.applyOptions({
+                        width: width,
+                        height: height
+                    });
+                }
             });
+            resizeObserver.observe(chartContainer);
         }
 
         async function fetchData(startDate, endDate, since) {
