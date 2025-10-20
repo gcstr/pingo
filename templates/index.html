@@ -232,7 +232,7 @@
         let chart = null;
         let series = {};
         let autoRefreshInterval = null;
-        let lastUpdateTime = 0; // Track last data point time
+        let lastTimestamp = null; // Track last timestamp for incremental polling
 
         // Convert timestamp to display local time within UTC time scale
         // Lightweight Charts doesn't support timezones natively, so we need to
@@ -313,18 +313,33 @@
             });
         }
 
-        async function fetchData(startDate, endDate) {
+        async function fetchData(startDate, endDate, since) {
             let url = '/api/stats';
+            const params = new URLSearchParams();
+
             if (startDate && endDate) {
-                url += '?start=' + encodeURIComponent(startDate) + '&end=' + encodeURIComponent(endDate);
+                params.append('start', startDate);
+                params.append('end', endDate);
+            } else if (since) {
+                params.append('since', since);
             }
+
+            if (params.toString()) {
+                url += '?' + params.toString();
+            }
+
             const response = await fetch(url);
             return await response.json();
         }
 
-        async function updateChart(startDate, endDate, forceReload = false) {
+        async function updateChart(startDate, endDate, isInitialLoad = false) {
             try {
-                const data = await fetchData(startDate, endDate);
+                // For incremental updates, only fetch data since last timestamp
+                const since = (!startDate && !endDate && !isInitialLoad && lastTimestamp)
+                    ? lastTimestamp
+                    : null;
+
+                const data = await fetchData(startDate, endDate, since);
 
                 // Check if data exists and is an array
                 if (!data || !Array.isArray(data)) {
@@ -333,6 +348,10 @@
                 }
 
                 if (data.length === 0) {
+                    // No new data in incremental poll - this is normal
+                    if (since) {
+                        return; // Silently return, no warning needed
+                    }
                     console.warn('No data available');
                     return;
                 }
@@ -378,55 +397,64 @@
                     avgData.push({ time, value: avg });
                     maxData.push({ time, value: max });
                     stddevData.push({ time, value: stddev });
+
+                    // Track the most recent timestamp (original, not converted)
+                    lastTimestamp = d.timestamp;
                 }
 
                 // Only update if we have valid data
                 if (minData.length > 0) {
-                    console.log(`Updating chart with ${minData.length} data points`);
+                    // For filtered views or initial load, replace all data
+                    // For incremental updates, append new data
+                    const isFullReload = startDate || endDate || isInitialLoad;
 
-                    // Validate all data before setting
-                    const validateData = (data, name) => {
-                        for (let i = 0; i < data.length; i++) {
-                            const point = data[i];
-                            if (!point || point.time === null || point.time === undefined ||
-                                point.value === null || point.value === undefined ||
-                                isNaN(point.time) || isNaN(point.value)) {
-                                console.error(`Invalid ${name} data at index ${i}:`, point);
-                                return false;
+                    if (isFullReload) {
+                        console.log(`Loading ${minData.length} data points`);
+
+                        // Validate all data before setting
+                        const validateData = (data, name) => {
+                            for (let i = 0; i < data.length; i++) {
+                                const point = data[i];
+                                if (!point || point.time === null || point.time === undefined ||
+                                    point.value === null || point.value === undefined ||
+                                    isNaN(point.time) || isNaN(point.value)) {
+                                    console.error(`Invalid ${name} data at index ${i}:`, point);
+                                    return false;
+                                }
                             }
+                            return true;
+                        };
+
+                        if (!validateData(minData, 'min') || !validateData(avgData, 'avg') ||
+                            !validateData(maxData, 'max') || !validateData(stddevData, 'stddev')) {
+                            console.error('Data validation failed, skipping update');
+                            return;
                         }
-                        return true;
-                    };
 
-                    if (!validateData(minData, 'min') || !validateData(avgData, 'avg') ||
-                        !validateData(maxData, 'max') || !validateData(stddevData, 'stddev')) {
-                        console.error('Data validation failed, skipping update');
-                        return;
-                    }
+                        // Replace all data
+                        try {
+                            series.min.setData(minData);
+                            series.avg.setData(avgData);
+                            series.max.setData(maxData);
+                            series.stddev.setData(stddevData);
+                        } catch (e) {
+                            console.error('Error setting data:', e);
+                            throw e;
+                        }
 
-                    // Always use setData to avoid issues with update()
-                    try {
-                        series.min.setData(minData);
-                        series.avg.setData(avgData);
-                        series.max.setData(maxData);
-                        series.stddev.setData(stddevData);
-                    } catch (e) {
-                        console.error('Error setting data:', e);
-                        console.error('Sample minData:', minData.slice(0, 5));
-                        console.error('Sample avgData:', avgData.slice(0, 5));
-                        console.error('Sample maxData:', maxData.slice(0, 5));
-                        console.error('Sample stddevData:', stddevData.slice(0, 5));
-                        throw e;
-                    }
-
-                    // Update last timestamp
-                    if (minData.length > 0) {
-                        lastUpdateTime = minData[minData.length - 1].time;
-                    }
-
-                    // Fit content only when filtering
-                    if (startDate && endDate) {
-                        chart.timeScale().fitContent();
+                        // Fit content only when filtering
+                        if (startDate && endDate) {
+                            chart.timeScale().fitContent();
+                        }
+                    } else {
+                        // Incremental update - append new points
+                        console.log(`Adding ${minData.length} new data point(s)`);
+                        for (let i = 0; i < minData.length; i++) {
+                            series.min.update(minData[i]);
+                            series.avg.update(avgData[i]);
+                            series.max.update(maxData[i]);
+                            series.stddev.update(stddevData[i]);
+                        }
                     }
                 } else {
                     console.warn('No valid data points after filtering');
@@ -473,8 +501,8 @@
             document.getElementById('startDate').value = '';
             document.getElementById('endDate').value = '';
 
-            // Restart auto-refresh
-            updateChart();
+            // Restart auto-refresh with initial load
+            updateChart(null, null, true);
             if (!autoRefreshInterval) {
                 autoRefreshInterval = setInterval(() => updateChart(), 5000);
             }
@@ -482,8 +510,8 @@
 
         // Initialize chart and load data
         initChart();
-        updateChart();
-        autoRefreshInterval = setInterval(() => updateChart(), 5000);
+        updateChart(null, null, true); // Initial load with all data
+        autoRefreshInterval = setInterval(() => updateChart(), 5000); // Poll for new data every 5s
     </script>
 </body>
 </html>

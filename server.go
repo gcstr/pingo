@@ -26,14 +26,20 @@ func startWebServer(db *sql.DB, port string) {
 	http.HandleFunc("/api/stats", func(w http.ResponseWriter, r *http.Request) {
 		startDate := r.URL.Query().Get("start")
 		endDate := r.URL.Query().Get("end")
+		since := r.URL.Query().Get("since")
 
 		var stats []PingStats
 		var err error
 
 		if startDate != "" && endDate != "" {
+			// Filtered date range
 			stats, err = getStatsByDateRange(db, startDate, endDate)
+		} else if since != "" {
+			// Get data since a specific timestamp (for polling)
+			stats, err = getStatsSince(db, since)
 		} else {
-			stats, err = getRecentStats(db, 50)
+			// Initial load - get all data (or recent data with high limit)
+			stats, err = getRecentStats(db, 1000)
 		}
 
 		if err != nil {

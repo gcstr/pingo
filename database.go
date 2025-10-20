@@ -114,3 +114,32 @@ func getStatsByDateRange(db *sql.DB, startDate, endDate string) ([]PingStats, er
 
 	return stats, nil
 }
+
+func getStatsSince(db *sql.DB, since string) ([]PingStats, error) {
+	// Parse the timestamp
+	sinceTime, err := time.Parse(time.RFC3339, since)
+	if err != nil {
+		return nil, fmt.Errorf("invalid since timestamp format: %v", err)
+	}
+
+	query := `SELECT timestamp, min, avg, max, stddev FROM ping_stats
+	          WHERE timestamp > ?
+	          ORDER BY timestamp ASC`
+	rows, err := db.Query(query, sinceTime)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var stats []PingStats
+	for rows.Next() {
+		var s PingStats
+		err := rows.Scan(&s.Timestamp, &s.Min, &s.Avg, &s.Max, &s.StdDev)
+		if err != nil {
+			return nil, err
+		}
+		stats = append(stats, s)
+	}
+
+	return stats, nil
+}
