@@ -32,7 +32,6 @@ archives:
     formats:
       - tar.gz
       - zip
-    rlcp: true
     name_template: >-
       {{ .ProjectName }}_
       {{- .Version }}_
