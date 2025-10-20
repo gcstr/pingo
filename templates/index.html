@@ -237,11 +237,12 @@
         // Convert timestamp to display local time within UTC time scale
         // Lightweight Charts doesn't support timezones natively, so we need to
         // adjust timestamps to make local time appear correctly on the UTC scale
-        function timeToLocal(originalTime) {
-            const d = new Date(originalTime * 1000);
+        // Note: Returns milliseconds (not seconds) to handle duplicate timestamps
+        function timeToLocal(originalTimeMs) {
+            const d = new Date(originalTimeMs);
             return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(),
                            d.getHours(), d.getMinutes(), d.getSeconds(),
-                           d.getMilliseconds()) / 1000;
+                           d.getMilliseconds());
         }
 
         // Initialize chart
@@ -385,14 +386,15 @@
 
                     // Parse timestamp and convert to local time display
                     // Lightweight Charts uses UTC internally, so we adjust to show local time
-                    const utcTime = Math.floor(new Date(d.timestamp).getTime() / 1000);
-                    const time = timeToLocal(utcTime);
+                    // Keep milliseconds to avoid duplicate timestamps
+                    const utcTimeMs = new Date(d.timestamp).getTime();
+                    const time = timeToLocal(utcTimeMs) / 1000; // Convert back to seconds for Lightweight Charts
 
                     // Skip if time is invalid
                     if (isNaN(time) || time <= 0 || !isFinite(time)) {
                         console.warn('Invalid time conversion:', {
                             original: d.timestamp,
-                            utcTime,
+                            utcTimeMs,
                             convertedTime: time
                         });
                         continue;
@@ -418,14 +420,21 @@
 
                         // Validate all data before setting
                         const validateData = (data, name) => {
+                            const seenTimes = new Set();
                             for (let i = 0; i < data.length; i++) {
                                 const point = data[i];
                                 if (!point || point.time === null || point.time === undefined ||
                                     point.value === null || point.value === undefined ||
-                                    isNaN(point.time) || isNaN(point.value)) {
+                                    isNaN(point.time) || isNaN(point.value) || !isFinite(point.value)) {
                                     console.error(`Invalid ${name} data at index ${i}:`, point);
                                     return false;
                                 }
+                                // Check for duplicate timestamps
+                                if (seenTimes.has(point.time)) {
+                                    console.error(`Duplicate timestamp in ${name} at index ${i}:`, point.time);
+                                    return false;
+                                }
+                                seenTimes.add(point.time);
                             }
                             return true;
                         };
@@ -433,6 +442,8 @@
                         if (!validateData(minData, 'min') || !validateData(avgData, 'avg') ||
                             !validateData(maxData, 'max') || !validateData(stddevData, 'stddev')) {
                             console.error('Data validation failed, skipping update');
+                            console.log('First 5 data points:', minData.slice(0, 5));
+                            console.log('Last 5 data points:', minData.slice(-5));
                             return;
                         }
 
@@ -444,6 +455,9 @@
                             series.stddev.setData(stddevData);
                         } catch (e) {
                             console.error('Error setting data:', e);
+                            console.error('Data length:', minData.length);
+                            console.error('First 5 points:', minData.slice(0, 5));
+                            console.error('Last 5 points:', minData.slice(-5));
                             throw e;
                         }
 
