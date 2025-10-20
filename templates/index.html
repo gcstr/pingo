@@ -475,6 +475,25 @@
             } else {
                 lineSeries.applyOptions({ visible: false });
             }
+
+            // Save checkbox state to localStorage
+            localStorage.setItem('checkbox_' + seriesName, checkbox.checked);
+        }
+
+        // Restore checkbox states from localStorage
+        function restoreCheckboxStates() {
+            ['min', 'avg', 'max', 'stddev'].forEach(seriesName => {
+                const saved = localStorage.getItem('checkbox_' + seriesName);
+                if (saved !== null) {
+                    const checkbox = document.getElementById('show' + seriesName.charAt(0).toUpperCase() + seriesName.slice(1));
+                    checkbox.checked = saved === 'true';
+
+                    // Apply the visibility state to the series
+                    if (series[seriesName]) {
+                        series[seriesName].applyOptions({ visible: checkbox.checked });
+                    }
+                }
+            });
         }
 
         function applyFilter() {
@@ -515,7 +534,10 @@
 
         // Initialize chart and load data
         initChart();
-        updateChart(null, null, true); // Initial load with all data
+        updateChart(null, null, true).then(() => {
+            // Restore checkbox states after initial data load
+            restoreCheckboxStates();
+        });
         autoRefreshInterval = setInterval(() => updateChart(), 5000); // Poll for new data every 5s
     </script>
 </body>
