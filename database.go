@@ -98,6 +98,12 @@ func initDB(dbPath string) (*sql.DB, error) {
 		}
 	}
 
+	// Create index on timestamp for better query performance
+	_, err = db.Exec(`CREATE INDEX IF NOT EXISTS idx_ping_stats_timestamp ON ping_stats(timestamp)`)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create timestamp index: %v", err)
+	}
+
 	return db, nil
 }
 

@@ -6,16 +6,60 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"net"
 	"os/exec"
 	"regexp"
+	"runtime"
 	"strconv"
+	"strings"
 	"time"
 )
 
+// validateTarget ensures the target is a valid hostname or IP address
+// and doesn't contain shell metacharacters that could enable command injection
+func validateTarget(target string) error {
+	// Check for shell metacharacters
+	if strings.ContainsAny(target, ";|&`$(){}[]<>\n\r") {
+		return fmt.Errorf("invalid target: contains shell metacharacters")
+	}
+
+	// Try to parse as IP address
+	if ip := net.ParseIP(target); ip != nil {
+		return nil
+	}
+
+	// Validate as hostname (DNS name)
+	// Hostnames can contain letters, digits, hyphens, and dots
+	hostnameRegex := regexp.MustCompile(`^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)*$`)
+	if !hostnameRegex.MatchString(target) {
+		return fmt.Errorf("invalid target: not a valid hostname or IP address")
+	}
+
+	return nil
+}
+
 func runPing(target string, count int) (string, error) {
-	// Use -t flag for timeout (macOS) with value equal to count
-	// This ensures the ping command doesn't hang indefinitely
-	cmd := exec.Command("ping", "-c", fmt.Sprint(count), "-t", fmt.Sprint(count), target)
+	// Validate target to prevent command injection
+	if err := validateTarget(target); err != nil {
+		return "", err
+	}
+
+	// Build ping command with platform-specific timeout flags
+	args := []string{"-c", fmt.Sprint(count)}
+
+	// Add timeout flag based on OS
+	// macOS uses -t for TTL timeout
+	// Linux uses -w for deadline (whole command timeout in seconds)
+	if runtime.GOOS == "darwin" {
+		args = append(args, "-t", fmt.Sprint(count))
+	} else if runtime.GOOS == "linux" {
+		args = append(args, "-w", fmt.Sprint(count))
+	}
+	// For other platforms, no timeout flag (Windows uses -w differently)
+
+	args = append(args, target)
+
+	cmd := exec.Command("ping", args...)
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	cmd.Stderr = &out
@@ -121,5 +165,8 @@ func runPingMonitor(db *sql.DB, target string, pingCount int, retentionDays int)
 			log.Printf("Saved stats: min=%.3f avg=%.3f max=%.3f stddev=%.3f ms",
 				*stats.Min, *stats.Avg, *stats.Max, *stats.StdDev)
 		}
+
+		// Wait before next ping round to avoid hammering the target
+		time.Sleep(5 * time.Second)
 	}
 }

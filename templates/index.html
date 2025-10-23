@@ -129,6 +129,51 @@
             --pico-background-color: #9C27B0;
             --pico-border-color: #9C27B0;
         }
+
+        /* Custom legend for crosshair */
+        #legend {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            z-index: 10;
+            background: var(--pico-card-background-color);
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            pointer-events: none;
+            display: none;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        #legend.visible {
+            display: block;
+        }
+
+        .legend-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+
+        .legend-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+        }
+
+        .legend-label {
+            font-weight: 500;
+            min-width: 80px;
+        }
+
+        .legend-value {
+            font-family: monospace;
+        }
     </style>
 </head>
 <body>
@@ -170,7 +215,9 @@
     <main class="container">
         <!-- Chart Card -->
         <article>
-            <div id="chart" class="chart-container"></div>
+            <div id="chart" class="chart-container">
+                <div id="legend"></div>
+            </div>
 
             <!-- Metrics Toggles -->
             <!-- <footer> -->
@@ -234,6 +281,16 @@
         let lastTimestamp = null; // Track last timestamp for incremental polling
         let hasSetInitialZoom = false; // Track if we've set the initial 10-minute zoom
         let chartType = localStorage.getItem('chartType') || 'simple'; // 'simple' or 'line'
+        const legendEl = document.getElementById('legend');
+
+        // Color map for metrics
+        const metricColors = {
+            min: '#4CAF50',
+            avg: '#2196F3',
+            max: '#FF9800',
+            stddev: '#9C27B0',
+            packetLoss: '#F44336'
+        };
 
         // Chart type toggle
         const simpleChartBtn = document.getElementById('simpleChartBtn');
@@ -282,6 +339,92 @@
             return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(),
                            d.getHours(), d.getMinutes(), d.getSeconds(),
                            d.getMilliseconds());
+        }
+
+        // Update legend with colored values on crosshair move
+        function updateLegend(param) {
+            if (!param || !param.time) {
+                legendEl.classList.remove('visible');
+                return;
+            }
+
+            const data = param.seriesData;
+            let html = '';
+
+            if (chartType === 'line') {
+                // Show all metrics for line mode
+                const metrics = [
+                    { key: 'min', label: 'Minimum' },
+                    { key: 'avg', label: 'Average' },
+                    { key: 'max', label: 'Maximum' },
+                    { key: 'stddev', label: 'Std Dev' },
+                    { key: 'packetLoss', label: 'Packet Loss' },
+                ];
+
+                metrics.forEach(metric => {
+                    const seriesObj = series[metric.key];
+                    if (!seriesObj) return;
+
+                    const seriesData = data.get(seriesObj);
+                    if (seriesData !== null && seriesData !== undefined) {
+                        // Extract value from series data (could be number or object with value property)
+                        const value = typeof seriesData === 'number' ? seriesData : seriesData.value;
+
+                        if (value !== undefined && value !== null) {
+                            const displayValue = metric.key === 'packetLoss'
+                                ? `${value.toFixed(1)}%`
+                                : `${value.toFixed(2)} ms`;
+
+                            html += `
+                                <div class="legend-row">
+                                    <div class="legend-color" style="background-color: ${metricColors[metric.key]}"></div>
+                                    <span class="legend-label">${metric.label}:</span>
+                                    <span class="legend-value">${displayValue}</span>
+                                </div>
+                            `;
+                        }
+                    }
+                });
+            } else {
+                // Simple mode - just average
+                const avgData = data.get(simpleSeries);
+                if (avgData !== undefined) {
+                    const value = typeof avgData === 'number' ? avgData : avgData.value;
+
+                    if (value !== undefined && value !== null) {
+                        html = `
+                            <div class="legend-row">
+                                <div class="legend-color" style="background-color: ${metricColors.avg}"></div>
+                                <span class="legend-label">Average:</span>
+                                <span class="legend-value">${value.toFixed(2)} ms</span>
+                            </div>
+                        `;
+                    }
+                }
+
+                // Also show packet loss in simple mode
+                const packetLossData = data.get(series.packetLoss);
+                if (packetLossData !== undefined) {
+                    const value = typeof packetLossData === 'number' ? packetLossData : packetLossData.value;
+
+                    if (value !== undefined && value !== null) {
+                        html += `
+                            <div class="legend-row">
+                                <div class="legend-color" style="background-color: ${metricColors.packetLoss}"></div>
+                                <span class="legend-label">Packet Loss:</span>
+                                <span class="legend-value">${value.toFixed(1)}%</span>
+                            </div>
+                        `;
+                    }
+                }
+            }
+
+            if (html) {
+                legendEl.innerHTML = html;
+                legendEl.classList.add('visible');
+            } else {
+                legendEl.classList.remove('visible');
+            }
         }
 
         // Initialize chart
@@ -367,6 +510,12 @@
                 },
             }, 1);  // Pane index 1 (creates a new pane below the default pane 0)
 
+            // Set the packet loss pane to be smaller (20% of total height)
+            const panes = chart.panes();
+            if (panes.length > 1) {
+                panes[1].setHeight(80);  // Set packet loss pane height in pixels
+            }
+
             // Handle container resize (both grow and shrink)
             const resizeObserver = new ResizeObserver(entries => {
                 for (let entry of entries) {
@@ -378,6 +527,9 @@
                 }
             });
             resizeObserver.observe(chartContainer);
+
+            // Subscribe to crosshair move to update legend
+            chart.subscribeCrosshairMove(updateLegend);
         }
 
         async function fetchData(since) {
