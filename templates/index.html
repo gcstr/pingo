@@ -357,6 +357,16 @@
                 });
             }
 
+            // Add packet loss histogram in a separate pane (always visible)
+            // Pass pane index as third parameter
+            series.packetLoss = chart.addSeries(LightweightCharts.HistogramSeries, {
+                color: '#F44336',
+                priceFormat: {
+                    type: 'custom',
+                    formatter: price => `${price.toFixed(1)}%`,
+                },
+            }, 1);  // Pane index 1 (creates a new pane below the default pane 0)
+
             // Handle container resize (both grow and shrink)
             const resizeObserver = new ResizeObserver(entries => {
                 for (let entry of entries) {
@@ -411,21 +421,11 @@
                 const avgData = [];
                 const maxData = [];
                 const stddevData = [];
+                const packetLossData = [];
 
                 for (const d of data) {
                     // Validate each field explicitly
                     if (!d) continue;
-
-                    const min = parseFloat(d.min);
-                    const avg = parseFloat(d.avg);
-                    const max = parseFloat(d.max);
-                    const stddev = parseFloat(d.stddev);
-
-                    // Skip if any value is NaN or null
-                    if (isNaN(min) || isNaN(avg) || isNaN(max) || isNaN(stddev)) {
-                        console.warn('Skipping invalid data point:', d);
-                        continue;
-                    }
 
                     if (!d.timestamp) {
                         console.warn('Skipping data point without timestamp:', d);
@@ -448,17 +448,31 @@
                         continue;
                     }
 
-                    minData.push({ time, value: min });
-                    avgData.push({ time, value: avg });
-                    maxData.push({ time, value: max });
-                    stddevData.push({ time, value: stddev });
+                    const min = parseFloat(d.min);
+                    const avg = parseFloat(d.avg);
+                    const max = parseFloat(d.max);
+                    const stddev = parseFloat(d.stddev);
+                    const packetLoss = parseFloat(d.packet_loss) || 0;
+
+                    // Check if we have valid ping data (not null during 100% packet loss)
+                    const hasValidPingData = !isNaN(min) && !isNaN(avg) && !isNaN(max) && !isNaN(stddev);
+
+                    if (hasValidPingData) {
+                        minData.push({ time, value: min });
+                        avgData.push({ time, value: avg });
+                        maxData.push({ time, value: max });
+                        stddevData.push({ time, value: stddev });
+                    }
+
+                    // Always add packet loss data (even when 100%)
+                    packetLossData.push({ time, value: packetLoss });
 
                     // Track the most recent timestamp (original, not converted)
                     lastTimestamp = d.timestamp;
                 }
 
-                // Only update if we have valid data
-                if (minData.length > 0) {
+                // Only update if we have valid data (check packet loss since it's always present)
+                if (packetLossData.length > 0) {
                     // For initial load, replace all data; otherwise append
                     const isFullReload = isInitialLoad;
 
@@ -504,6 +518,9 @@
                                 series.max.setData(maxData);
                                 series.stddev.setData(stddevData);
                             }
+
+                            // Always set packet loss data (in separate pane)
+                            series.packetLoss.setData(packetLossData);
                         } catch (e) {
                             console.error('Error setting data:', e);
                             console.error('Data length:', minData.length);
@@ -513,11 +530,11 @@
                         }
 
                         // Check if this is a user-requested filter
-                        if (!hasSetInitialZoom && minData.length > 0) {
-                            // On initial load, zoom to last 10 minutes (only once)
-                            const lastTime = minData[minData.length - 1].time;
-                            const tenMinutesInSeconds = 5 * 60;
-                            const startTime = lastTime - tenMinutesInSeconds;
+                        if (!hasSetInitialZoom && packetLossData.length > 0) {
+                            // On initial load, zoom to last 5 minutes (only once)
+                            const lastTime = packetLossData[packetLossData.length - 1].time;
+                            const fiveMinutesInSeconds = 5 * 60;
+                            const startTime = lastTime - fiveMinutesInSeconds;
                             chart.timeScale().setVisibleRange({
                                 from: startTime,
                                 to: lastTime
@@ -526,18 +543,25 @@
                         }
                     } else {
                         // Incremental update - append new points
-                        if (chartType === 'simple') {
-                            for (let i = 0; i < minData.length; i++) {
-                                simpleSeries.update(avgData[i]);
+                        if (minData.length > 0) {
+                            if (chartType === 'simple') {
+                                for (let i = 0; i < avgData.length; i++) {
+                                    simpleSeries.update(avgData[i]);
+                                }
+                            } else {
+                                // Line mode
+                                for (let i = 0; i < minData.length; i++) {
+                                    series.min.update(minData[i]);
+                                    series.avg.update(avgData[i]);
+                                    series.max.update(maxData[i]);
+                                    series.stddev.update(stddevData[i]);
+                                }
                             }
-                        } else {
-                            // Line mode
-                            for (let i = 0; i < minData.length; i++) {
-                                series.min.update(minData[i]);
-                                series.avg.update(avgData[i]);
-                                series.max.update(maxData[i]);
-                                series.stddev.update(stddevData[i]);
-                            }
+                        }
+
+                        // Always update packet loss (in separate pane)
+                        for (let i = 0; i < packetLossData.length; i++) {
+                            series.packetLoss.update(packetLossData[i]);
                         }
                     }
                 } else {
