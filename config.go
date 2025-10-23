@@ -20,8 +20,23 @@ type Config struct {
 func getDefaultDataDir() string {
 	home, err := os.UserHomeDir()
 	if err != nil {
-		log.Printf("Warning: Could not get user home directory: %v", err)
-		return "./pingo"
+		fmt.Fprintf(os.Stderr, "\nError: Could not get user home directory: %v\n\n", err)
+		fmt.Fprintln(os.Stderr, "Pingo requires $HOME to be set to follow XDG Base Directory specifications.")
+		fmt.Fprintln(os.Stderr, "")
+		fmt.Fprintln(os.Stderr, "Please set the HOME environment variable before running pingo:")
+		fmt.Fprintln(os.Stderr, "  export HOME=/home/yourusername")
+		fmt.Fprintln(os.Stderr, "  pingo")
+		fmt.Fprintln(os.Stderr, "")
+		fmt.Fprintln(os.Stderr, "Or if installing as root/with sudo:")
+		fmt.Fprintln(os.Stderr, "  sudo -E pingo    # Preserves your HOME")
+		fmt.Fprintln(os.Stderr, "  # or")
+		fmt.Fprintln(os.Stderr, "  sudo HOME=/root pingo")
+		fmt.Fprintln(os.Stderr, "")
+		fmt.Fprintln(os.Stderr, "For systemd services, add this to your service file:")
+		fmt.Fprintln(os.Stderr, "  [Service]")
+		fmt.Fprintln(os.Stderr, "  Environment=\"HOME=/home/yourusername\"")
+		fmt.Fprintln(os.Stderr, "")
+		os.Exit(1)
 	}
 	return filepath.Join(home, ".local", "share", "pingo")
 }
@@ -29,8 +44,24 @@ func getDefaultDataDir() string {
 func getDefaultConfigDir() string {
 	home, err := os.UserHomeDir()
 	if err != nil {
-		log.Printf("Warning: Could not get user home directory: %v", err)
-		return "."
+		fmt.Fprintf(os.Stderr, "\nError: Could not get user home directory: %v\n\n", err)
+		fmt.Fprintln(os.Stderr, "Pingo requires $HOME to be set to follow XDG Base Directory specifications.")
+		fmt.Fprintln(os.Stderr, "")
+		fmt.Fprintln(os.Stderr, "Please set the HOME environment variable before running pingo:")
+		fmt.Fprintln(os.Stderr, "  export HOME=/home/yourusername")
+		fmt.Fprintln(os.Stderr, "  pingo")
+		fmt.Fprintln(os.Stderr, "")
+		fmt.Fprintln(os.Stderr, "Or if installing as root/with sudo:")
+		fmt.Fprintln(os.Stderr, "  sudo -E pingo    # Preserves your HOME")
+		fmt.Fprintln(os.Stderr, "  # or")
+		fmt.Fprintln(os.Stderr, "  sudo HOME=/root pingo")
+		fmt.Fprintln(os.Stderr, "")
+		fmt.Fprintln(os.Stderr, "For systemd services, add this to your service file:")
+		fmt.Fprintln(os.Stderr, "  [Service]")
+		fmt.Fprintln(os.Stderr, "  Environment=\"HOME=/home/yourusername\"")
+		fmt.Fprintln(os.Stderr, "")
+		os.Exit(1)
+		return "" // unreachable
 	}
 	return filepath.Join(home, ".config", "pingo")
 }
